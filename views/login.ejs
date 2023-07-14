@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<form>
+    <h2> Login</h2>
+    <label for="email">Email</label>
+    <input type="text" name="email" required />
+    <div className="email error"></div>
+    <label for="password">Password</label>
+    <input type="password" name="password" required />
+    <div className="password error"></div>
+    <button>Login</button>
+</form>
+
+<script>
+    const form = document.querySelector('form')
+
+    form.addEventListener('submit',(e)=>{
+        e.preventDefault();
+
+        //get the values
+        const email = form.email.value;
+        const password = form.password.vlaue;
+
+        console.log(email,password)
+    });
+</script>
+<!DOCTYPE html>
