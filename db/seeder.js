@@ -1,15 +1,16 @@
 const bcrypt = require('bcrypt')
 const User = require('../models/user')
+require('dotenv').config()
 
 const users = [
     {
         email: 'admin@amalitech.com',
-        password: 'admin123',
-        role: 'admin'
+        password: process.env.SEEDER_ADMIN1,
+        role:'admin'
     },
     {
         email: 'faith@amalitech.com',
-        password: 'admin456',
+        password:  process.env.SEEDER_ADMIN2,
         role: 'admin'
     }
 ];
@@ -24,13 +25,17 @@ const seedUsers = async () => {
         const seededUsers = await Promise.all(
             users.map(async (user) => {
                 const hashedPassword = await bcrypt.hash(user.password, 10);
+
                 return {
                     ...user,
                     password: hashedPassword,
+                    isVerified:true,
+                    isAdmin:true
                 };
             })
-        );
-        await User.insertMany(seededUsers);
+            );
+            await User.insertMany(seededUsers);
+            seededUsers.isVerified=true;
 
         console.log('User seeding completed.');
         return;

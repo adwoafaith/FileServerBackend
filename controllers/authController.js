@@ -1,5 +1,6 @@
 const User = require("../models/user");
 const bcrypt = require("bcrypt");
+const validator = require("validator")
 const jwt = require("jsonwebtoken");
 //const sendEmail = require('../utils/email')
 const businessDistribution = require("../models/file");
@@ -7,33 +8,101 @@ const { genToken, verifyToken } = require("../utils/access-token");
 const crypto = require("crypto");
 const nodemailer = require("nodemailer");
 require('dotenv').config()
+
+const mail_name = process.env.USER_NAME;
+const password = process.env.APP_PASSWORD;
+
+
 //handle errors
 const handleErrors = (err) => {
     let errors = { email: "", password: "" };
-
     //handeling duplicate error code
-    if (err.code === 11000)
-        return { message: "That email is already registered" };
+    if (err.code === 11000) {
+        errors.email = 'That email is already registed';
+        return errors
+    }
 
     //validation errors
     if (err.message.includes("User validation failed")) {
+        console.log(Object.values(err.errors))
         Object.values(err.errors).forEach(({ properties }) => {
             errors[properties.path] = properties.message;
+            console.log(errors.properties)
         });
     }
-    return { message: errors.password };
+    return errors;
+
 };
+//creating a nodemailer transporter globally
+//transporter create a transporter
+const transporter = nodemailer.createTransport({
+    service: "Gmail",
+    auth: {
+        user: mail_name,
+        pass: password,
+    },
+});
 
 //registration function
 const signup_post = async (req, res, next) => {
-    const { email, password, role } = req.body;
+    const { email, password } = req.body;
+    console.log(email, password)
     try {
-        const user = await User.create({ email, role, password });
-        res.status(201).json({ message: "Registered sucessfully" });
-    } catch (err) {
-        res.status(400).json({ ...handleErrors(err) });
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ error: 'User already exists' });
+        }
+        //create a new user
+        const newUser = new User({ email, password, isVerified: true });
+        await newUser.save();
+        return res.status(200).json({message:"User created successfully"})
     }
+    catch (err) {
+        const errors = handleErrors(err)
+        return res.status(400).json({ errors });
+    }
+
 };
+const confirmOTP = (async (req, res, next) => {
+    try {
+
+        const { otp } = req.body;
+        const tokenData = verifyToken(req.headers['authorization'].split(' ')[1])
+        if (tokenData.code) return res.status(401).json({ message: 'Unauthorized' })
+        if (tokenData.otp === otp) return next()
+        else return res.status(400).json({ message: 'incorrect otp' })
+
+    }
+    catch (error) {
+        return res.status(400).json({ message: error })
+    }
+});
+
+const genOTP = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const otp = crypto.randomBytes(3).toString('hex');
+        // Compose the email message
+        const mailOptions = {
+            from: mail_name,
+            to: email,
+            subject: 'Account Verification',
+            html: `
+    <div>
+        <p>Dear user, below is your verification code</p>
+        <h1>${otp}</h1>
+    </div>
+`
+        };
+        // Send the email
+        await transporter.sendMail(mailOptions);
+        return res.status(200).json({ token: genToken({ email, otp }) })
+    } catch (error) {
+        return res.status(400).json({ message: error.message })
+    }
+
+}
+
 
 const login = async (req, res, next) => {
     const { email, password } = req.body;
@@ -51,23 +120,26 @@ const login = async (req, res, next) => {
                 message: "login not successful",
                 error: "user not found",
             });
-        } else {
-            bcrypt.compare(password, user.password, (err, result) => {
-                if (err) return next(err);
-                if (result) {
-                    let token = genToken({ email, role: user.role });
-                    return res.status(200).json({
-                        message: "login Successful",
-                        token,
-                        role: user.role
-                    });
-                } else {
-                    return res.status(400).json({
-                        message: "Login not successfull",
-                    });
-                }
-            });
         }
+        if (!user.isVerified) {
+            return res.status(403).json({ error: 'Account not verified' });
+        }
+        bcrypt.compare(password, user.password, (err, result) => {
+            if (err) return next(err);
+            if (result) {
+                let token = genToken({ email, role: user.role });
+                return res.status(200).json({
+                    message: "login Successful",
+                    token,
+                    role: user.role
+                });
+            } else {
+                return res.status(400).json({
+                    message: "Login not successfull",
+                });
+            }
+        });
+
     } catch (error) {
         res.status(400).json({
             message: "An error occured",
@@ -89,22 +161,13 @@ const forgotPassword = async (req, res) => {
                 .status(400)
                 .json({ success: false, message: "User is not found" });
         }
+
         //store token and generate tokenexpires in user records
         user.passwordResetToken = token;
         user.passwordResetTokenExpires = Date.now() + 3600000;
         await user.save();
 
-        const mail_name = process.env.USER_NAME;
-        const password = process.env.APP_PASSWORD;
 
-        //transporter create a transporter
-        const transporter = nodemailer.createTransport({
-            service: "Gmail",
-            auth: {
-                user: mail_name,
-                pass: password,
-            },
-        });
         //email options
         const mailOptions = {
             from: mail_name,
@@ -113,13 +176,16 @@ const forgotPassword = async (req, res) => {
             text:
                 `You or someone send a request to change your email password` +
                 `ignore of not necessary or click on the link below to reset your password:\n\n` +
-                `${FRONTEND_URL}/resetPassword/${token}\n\n`,
+                `${process.env.FRONTEND_URL}/resetPassword/${token}\n\n`,
         };
         transporter.sendMail(mailOptions, (error, info) => {
             if (error) {
                 return res
                     .status(500)
                     .json({ sucess: false, message: "Email not send! Failed" });
+            }
+            else if (!user.isVerified) {
+                return res.status(403).json({ error: 'Account not verified' });
             }
             return res
                 .status(200)
@@ -169,9 +235,13 @@ const resetPassword = async (req, res) => {
     }
 };
 
+
+
 module.exports = {
     login,
     signup_post,
+    confirmOTP,
+    genOTP,
     forgotPassword,
     resetPassword,
 };
