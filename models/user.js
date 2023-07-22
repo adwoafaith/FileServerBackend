@@ -41,7 +41,7 @@ const userSchema = new Schema ({
             minNumbers: 1, // At least 1 number
       });
     },
-    message: 'Please enter a valid password. Password must contain uppercase,lowercase,numbers and a symbol',
+    message:'Please enter a valid password. Password must contain uppercase,lowercase,numbers and a symbol',
   },
 },
     role:{
@@ -54,12 +54,6 @@ const userSchema = new Schema ({
     passwordResetTokenExpires:Date
 },{timestamps:true})
 
-//fire a function after doc saved to db
-// userSchema.post('save',function(doc,next){
-//     console.log('new user was created & saved',doc)
-//     next();
-// })
-// //hasing the user password
 userSchema.pre('save',async function(next) {
    const salt = await bcrypt.genSalt();
    this.password = await bcrypt.hash(this.password,salt)

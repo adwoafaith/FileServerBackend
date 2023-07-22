@@ -16,11 +16,19 @@ const addFile = async (req, res, next) => {
         const results = await cloudinary.v2.uploader.upload(req.file.path, { folder: 'file_server' })
 
         if (results?.secure_url) {
-            const newFile = await businessDistribution.create({ title, description, contentType, filename, file_url: results?.secure_url })
+            const data = {
+                title,
+                description,
+                contentType,
+                filename,
+                file_url: results?.secure_url,
+                format: results?.format
+            }
+            const newFile = await businessDistribution.create(data)
             return res.status(200).json({ message: "File added sucessfully", file: newFile });
         }
     } catch (error) {
-        if(error.code === 11000) return res.status(409).json({ message: "File title already exists"})
+        if (error.code === 11000) return res.status(409).json({ message: "File title already exists" })
         return res.status(error.code || 400).json({
             message: error.message || "An error occured",
             error: error,

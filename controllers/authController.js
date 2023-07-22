@@ -50,16 +50,16 @@ const signup_post = async (req, res, next) => {
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ error: 'User already exists' });
+            return res.status(400).json({ message: 'User already exists' });
         }
         //create a new user
         const newUser = new User({ email, password, isVerified: true });
         await newUser.save();
-        return res.status(200).json({message:"User created successfully"})
+        return res.status(200).json({ message: "User created successfully" })
     }
     catch (err) {
         const errors = handleErrors(err)
-        return res.status(400).json({ errors });
+        return res.status(400).json({ message: errors });
     }
 
 };
@@ -96,8 +96,9 @@ const genOTP = async (req, res) => {
         };
         // Send the email
         await transporter.sendMail(mailOptions);
-        return res.status(200).json({ token: genToken({ email, otp }) })
+        return res.status(200).json({ token: genToken({ email, otp }), message: "Check your email for verification" })
     } catch (error) {
+        console.log(error)
         return res.status(400).json({ message: error.message })
     }
 
@@ -117,8 +118,7 @@ const login = async (req, res, next) => {
         const user = await User.findOne({ email });
         if (!user) {
             return res.status(400).json({
-                message: "login not successful",
-                error: "user not found",
+                message: "User not found",
             });
         }
         if (!user.isVerified) {

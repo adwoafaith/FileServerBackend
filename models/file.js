@@ -2,22 +2,20 @@ const mongoose = require('mongoose')
 const Schema = mongoose.Schema;
 
 //upload schema
-const businessDistributionSchema = new Schema ({
-    title:{
+const businessDistributionSchema = new Schema({
+    title: {
         type: String,
         unique: true
     },
-    description:{
+    description: {
         type: String,
     },
-    filename: {
+    file_url: {
         type: String,
     },
-    file_url:{
+    format: {
         type: String,
-    },
-    contentType: {
-      type: String,
+        required: true
     },
     emailCount: {
         type: Number,
@@ -27,8 +25,8 @@ const businessDistributionSchema = new Schema ({
         type: Number,
         default: 0
     }
-},{timestamps:true})
+}, { timestamps: true })
 
-const businessDistribution = mongoose.model('businessDistribution',businessDistributionSchema)
+const businessDistribution = mongoose.model('businessDistribution', businessDistributionSchema)
 
-module.exports =   businessDistribution
+module.exports = businessDistribution
