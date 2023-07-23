@@ -58,25 +58,12 @@ const signup_post = async (req, res, next) => {
         return res.status(200).json({ message: "User created successfully" })
     }
     catch (err) {
+        s
         const errors = handleErrors(err)
-        return res.status(400).json({ message: errors });
+        return res.status(400).json({ errors });
     }
 
 };
-const confirmOTP = (async (req, res, next) => {
-    try {
-
-        const { otp } = req.body;
-        const tokenData = verifyToken(req.headers['authorization'].split(' ')[1])
-        if (tokenData.code) return res.status(401).json({ message: 'Unauthorized' })
-        if (tokenData.otp === otp) return next()
-        else return res.status(400).json({ message: 'incorrect otp' })
-
-    }
-    catch (error) {
-        return res.status(400).json({ message: error })
-    }
-});
 
 const genOTP = async (req, res) => {
     try {
@@ -103,6 +90,20 @@ const genOTP = async (req, res) => {
     }
 
 }
+const confirmOTP = (async (req, res, next) => {
+    try {
+
+        const { otp } = req.body;
+        const tokenData = verifyToken(req.headers['authorization'].split(' ')[1])
+        if (tokenData.code) return res.status(401).json({ message: 'Unauthorized' })
+        if (tokenData.otp === otp) return next()
+        else return res.status(400).json({ message: 'incorrect otp' })
+
+    }
+    catch (error) {
+        return res.status(400).json({ message: error })
+    }
+});
 
 
 const login = async (req, res, next) => {
