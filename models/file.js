@@ -15,7 +15,6 @@ const businessDistributionSchema = new Schema({
     },
     format: {
         type: String,
-        required: true
     },
     emailCount: {
         type: Number,
